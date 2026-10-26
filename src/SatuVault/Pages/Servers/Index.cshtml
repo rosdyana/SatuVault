@@ -1,0 +1,84 @@
+@page
+@model SatuVault.Pages.Servers.IndexModel
+@{
+    ViewData["Title"] = Model.Deleted ? "Deleted servers" : "Servers";
+    var me = HttpContext.RequireAppUser();
+    var canAdd = !Model.Deleted && me.VisibleTeamIds.Count > 0;
+    var filtered = !string.IsNullOrWhiteSpace(Model.Q) || Model.Team is not null;
+}
+<div class="page-head">
+    <div>
+        @if (Model.Deleted) { <a class="crumb" href="~/Servers">@Html.Icon("arrow-counter-clockwise")Back to servers</a> }
+        <h1>@ViewData["Title"]</h1>
+        <p class="sub">@(Model.Deleted ? "A team manager can restore these." : "Connect with Remote Desktop or SSH from your own computer.")</p>
+    </div>
+    @if (canAdd)
+    {
+        <a class="button" href="~/Servers/Edit@(Model.Team is null ? "" : $"?team={Model.Team}")">@Html.Icon("plus")New server</a>
+    }
+</div>
+
+<form method="get" class="toolbar" role="search">
+    <label class="search grow-2">@Html.Icon("magnifying-glass")<input name="q" value="@Model.Q" placeholder="Search hostname, IP, OS, asset ID, environment" aria-label="Search"></label>
+    <select name="team" aria-label="Team">
+        <option value="">All my teams</option>
+        @foreach (var t in Model.TeamsById.Values.OrderBy(t => t.Name))
+        {
+            <option value="@t.Id" selected="@(t.Id == Model.Team)">@t.Name</option>
+        }
+    </select>
+    @if (Model.Deleted) { <input type="hidden" name="deleted" value="true"> }
+    <button class="secondary">Filter</button>
+    @if (filtered) { <a class="button ghost" href="~/Servers@(Model.Deleted ? "?deleted=true" : "")">Clear</a> }
+    @if (!Model.Deleted && (me.IsAdmin || me.Roles.Values.Contains(TeamRole.Manager)))
+    {
+        <span class="spacer"></span>
+        <a class="button ghost" href="~/Servers?deleted=true">@Html.Icon("trash")Deleted servers</a>
+    }
+</form>
+
+@if (Model.Results.Count == 0)
+{
+    <div class="empty">
+        @Html.Icon(filtered ? "magnifying-glass" : "hard-drives", "xl")
+        @if (filtered)
+        {
+            <h3>No matches</h3>
+            <p>No server@(string.IsNullOrWhiteSpace(Model.Q) ? "" : $" matches “{Model.Q}”") in the selected teams.</p>
+        }
+        else if (Model.Deleted)
+        {
+            <h3>No deleted servers</h3>
+            <p>Deleted servers show up here so a manager can restore them.</p>
+        }
+        else
+        {
+            <h3>No servers yet</h3>
+            <p>Record hostname, IP, specs and asset ID once, so everyone finds the right machine.</p>
+            @if (canAdd) { <p><a class="button" href="~/Servers/Edit">@Html.Icon("plus")Add the first server</a></p> }
+        }
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Hostname</th><th>IP address</th><th class="hide-sm">OS</th><th class="hide-sm">Specs</th><th class="hide-sm">Asset ID</th><th class="hide-sm">Environment</th><th class="hide-sm">Team</th></tr></thead>
+        <tbody>
+        @foreach (var s in Model.Results)
+        {
+            <tr>
+                <td><a class="title-link" href="~/Servers/Details?id=@s.Id">@s.Info.Hostname</a></td>
+                <td class="nowrap">@if (s.Info.IpAddress is { } ip) { <span class="cell-copy"><code>@ip</code><button class="small ghost" data-copy-text="@ip" aria-label="Copy IP address @ip">@Html.Icon("copy")<span class="hide-sm">Copy</span></button></span> }</td>
+                <td class="hide-sm">@s.Info.Os</td>
+                <td class="hide-sm">@string.Join(" · ", new[] { s.Info.Cpu, s.Info.Ram, s.Info.Disk }.Where(x => x is not null))</td>
+                <td class="hide-sm nowrap">@s.Info.AssetId</td>
+                <td class="hide-sm">@if (s.Info.Environment is { } env) { <span class="badge @(env.Equals("Production", StringComparison.OrdinalIgnoreCase) ? "accent" : "")">@env</span> }</td>
+                <td class="hide-sm">@Model.TeamsById.GetValueOrDefault(s.TeamId)?.Name</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    </div>
+    <p class="hint">@Model.Results.Count @(Model.Results.Count == 1 ? "server" : "servers")</p>
+}

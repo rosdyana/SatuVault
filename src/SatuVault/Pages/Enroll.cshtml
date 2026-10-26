@@ -1,0 +1,32 @@
+@page
+@model EnrollModel
+@{
+    ViewData["Title"] = "Set up authenticator";
+}
+<div class="page-head">
+    <div>
+        <h1>Set up your authenticator app</h1>
+        <p class="sub">SatuVault asks for a code from it every time you reveal or copy a password or secret.</p>
+    </div>
+</div>
+<div class="panel">
+    <div class="enroll">
+        <div class="qr"><img src="@Model.QrDataUri" alt="QR code for your authenticator app"></div>
+        <div>
+            <ol class="steps">
+                <li>Open Microsoft Authenticator, Google Authenticator or any TOTP app.</li>
+                <li>Add an account and scan this QR code.</li>
+                <li>Enter the 6 digit code the app shows.</li>
+            </ol>
+            <form method="post" class="stack narrow">
+                <div asp-validation-summary="ModelOnly"></div>
+                <label>Code from the app
+                    <input asp-for="Code" class="input-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus placeholder="000000">
+                </label>
+                <div class="form-actions"><button>@Html.Icon("check")Link authenticator</button></div>
+            </form>
+            <p class="hint">Can't scan? Enter this key by hand (time based, 6 digits): <code id="manual-key">@Model.ManualKey</code></p>
+        </div>
+    </div>
+</div>
+<p class="hint">Lost your phone later? An admin can reset your authenticator, and you set it up again at your next sign in.</p>

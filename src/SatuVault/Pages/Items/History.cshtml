@@ -1,0 +1,42 @@
+@page
+@model SatuVault.Pages.Items.HistoryModel
+@{
+    var i = Model.Item;
+    ViewData["Title"] = $"History of {i.Meta.Title}";
+    var field = i.Kind == ItemKind.Credential ? "password" : "secret";
+}
+<div class="page-head">
+    <div>
+        <a class="crumb" href="~/Items/Details?id=@i.Id">@Html.Icon("key")@i.Meta.Title</a>
+        <h1>Version history</h1>
+        <p class="sub">Every save keeps the previous version. Revealing an old one also needs a code and is logged.</p>
+    </div>
+</div>
+<div class="table-wrap">
+<table>
+    <thead><tr><th>Version</th><th class="hide-sm">Saved</th><th>Title and username</th><th>@(field == "password" ? "Password" : "Secret")</th></tr></thead>
+    <tbody>
+        <tr>
+            <td class="nowrap">@i.Version <span class="badge accent">current</span></td>
+            <td class="hide-sm nowrap">@Html.When(i.UpdatedAt)<div class="sub">@Fmt.User(Model.UsersById, i.UpdatedBy)</div></td>
+            <td>@i.Meta.Title<div class="sub">@i.Meta.Username</div></td>
+            <td><span class="secret-value" id="v-cur">••••••••</span>
+                <button class="small" data-secret data-action="reveal" data-item="@i.Id" data-field="@field" data-target="#v-cur">@Html.Icon("eye")Reveal</button></td>
+        </tr>
+        @foreach (var v in Model.Versions)
+        {
+            <tr>
+                <td>@v.Version</td>
+                <td class="hide-sm nowrap">@Html.When(v.ChangedAt)<div class="sub">@Fmt.User(Model.UsersById, v.ChangedBy)</div></td>
+                <td>@v.Meta.Title<div class="sub">@v.Meta.Username</div></td>
+                <td><span class="secret-value" id="v-@v.Version">••••••••</span>
+                    <button class="small" data-secret data-action="reveal" data-item="@i.Id" data-field="@field" data-version="@v.Version" data-target="#v-@v.Version">@Html.Icon("eye")Reveal</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+</div>
+@if (Model.Versions.Count == 0)
+{
+    <p class="hint">No earlier versions: this item hasn't been changed since it was created.</p>
+}

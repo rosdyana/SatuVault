@@ -1,0 +1,50 @@
+@page
+@model SatuVault.Pages.Teams.IndexModel
+@{
+    ViewData["Title"] = "Teams";
+    var me = HttpContext.RequireAppUser();
+}
+<div class="page-head">
+    <div>
+        <h1>Teams</h1>
+        <p class="sub">Members see and edit their team's credentials and servers. Managers also add people and restore deleted items.</p>
+    </div>
+</div>
+@if (Model.List.Count == 0)
+{
+    <div class="empty">
+        @Html.Icon("users-three", "xl")
+        <h3>@(me.IsAdmin ? "No teams yet" : "You're not in a team yet")</h3>
+        <p>@(me.IsAdmin ? "Create the first team below and choose its manager." : "Ask a team manager to add you.")</p>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Team</th><th>Your role</th><th>Members</th></tr></thead>
+        <tbody>
+        @foreach (var t in Model.List)
+        {
+            <tr>
+                <td><a class="title-link" href="~/Teams/Details?id=@t.Id">@t.Name</a></td>
+                <td>@if (me.Roles.TryGetValue(t.Id, out var r)) { <span class="badge @(r == TeamRole.Manager ? "accent" : "")">@r.ToString().ToLowerInvariant()</span> } else { <span class="badge">admin access</span> }</td>
+                <td class="num">@Model.MemberCounts[t.Id]</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    </div>
+}
+
+@if (me.IsAdmin)
+{
+    <h2>New team</h2>
+    <form method="post" asp-page-handler="Create" class="stack panel wide">
+        <div class="grid2">
+            <label>Name <input asp-for="NewName" required maxlength="100" placeholder="Infrastructure"></label>
+            <label>First manager <span class="muted">(the email they sign in with)</span><input asp-for="ManagerEmail" type="email" required placeholder="name@company.com"></label>
+        </div>
+        <div class="form-actions"><button>@Html.Icon("plus")Create team</button></div>
+    </form>
+}

@@ -1,0 +1,54 @@
+@page
+@model SatuVault.Pages.Admin.UsersModel
+@{
+    ViewData["Title"] = "Users";
+    var me = HttpContext.RequireAppUser();
+}
+<div class="page-head">
+    <div>
+        <h1>Users</h1>
+        <p class="sub">Everyone who has signed in. Each admin action needs your own authenticator code and is logged.</p>
+    </div>
+</div>
+<div class="table-wrap">
+<table>
+    <thead><tr><th>User</th><th>Status</th><th class="hide-sm">Last sign in</th><th>Action</th></tr></thead>
+    <tbody>
+    @foreach (var u in Model.List)
+    {
+        <tr>
+            <td>@u.Email<div class="sub">@u.Name</div></td>
+            <td>
+                <span class="row">
+                    @if (u.IsAdmin) { <span class="badge accent">admin</span> }
+                    @if (u.Disabled) { <span class="badge warn">disabled</span> }
+                    @if (!u.TotpEnrolled) { <span class="badge warn">no authenticator</span> }
+                    @if (u.TotpLockedUntil > DateTime.UtcNow) { <span class="badge warn">code locked</span> }
+                    @if (!u.IsAdmin && !u.Disabled && u.TotpEnrolled) { <span class="badge">active</span> }
+                </span>
+            </td>
+            <td class="hide-sm nowrap">@Html.When(u.LastLoginAt)</td>
+            <td>
+                @if (u.Id != me.Id)
+                {
+                    <form method="post" class="row">
+                        <input type="hidden" name="userId" value="@u.Id">
+                        <select name="action" aria-label="Action for @u.Email" class="grow">
+                            @if (u.IsAdmin) { <option value="revoke-admin">Remove admin</option> } else { <option value="grant-admin">Make admin</option> }
+                            @if (u.Disabled) { <option value="enable">Enable</option> } else { <option value="disable">Disable</option> }
+                            <option value="reset-totp">Reset authenticator</option>
+                        </select>
+                        <input name="code" class="input-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="code" required aria-label="Your authenticator code">
+                        <button class="secondary">Apply</button>
+                    </form>
+                }
+                else
+                {
+                    <span class="hint">This is you</span>
+                }
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+</div>

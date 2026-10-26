@@ -1,0 +1,92 @@
+@page
+@model SatuVault.Pages.Teams.DetailsModel
+@{
+    var t = Model.Team;
+    ViewData["Title"] = t.Name;
+    var me = HttpContext.RequireAppUser();
+    var manage = me.CanManage(t.Id);
+}
+<div class="page-head">
+    <div>
+        <a class="crumb" href="~/Teams">@Html.Icon("users-three")Teams</a>
+        <h1>@t.Name</h1>
+        <p class="sub">@Model.Members.Count @(Model.Members.Count == 1 ? "member" : "members")</p>
+    </div>
+    <div class="row">
+        <a class="button secondary" href="~/Items?team=@t.Id">@Html.Icon("key")Credentials</a>
+        <a class="button secondary" href="~/Servers?team=@t.Id">@Html.Icon("hard-drives")Servers</a>
+    </div>
+</div>
+
+<div class="section-head"><h2>Members</h2></div>
+<div class="table-wrap">
+<table>
+    <thead><tr><th>Email</th><th class="hide-sm">Name</th><th>Role</th>@if (manage) { <th class="actions-cell"><span class="hide-sm">Remove</span></th> }</tr></thead>
+    <tbody>
+    @foreach (var (m, u) in Model.Members)
+    {
+        <tr>
+            <td>@(u?.Email ?? m.UserId) @if (u?.Disabled == true) { <span class="badge warn">disabled</span> }</td>
+            <td class="hide-sm">@u?.Name</td>
+            <td>
+                @if (manage)
+                {
+                    <form method="post" asp-page-handler="Role" asp-route-id="@t.Id" class="row">
+                        <input type="hidden" name="userId" value="@m.UserId">
+                        <select name="role" aria-label="Role for @(u?.Email)" class="grow">
+                            <option value="@TeamRole.Member" selected="@(m.Role == TeamRole.Member)">member</option>
+                            <option value="@TeamRole.Manager" selected="@(m.Role == TeamRole.Manager)">manager</option>
+                        </select>
+                        <button class="small secondary">Save</button>
+                    </form>
+                }
+                else
+                {
+                    <span class="badge @(m.Role == TeamRole.Manager ? "accent" : "")">@m.Role.ToString().ToLowerInvariant()</span>
+                }
+            </td>
+            @if (manage)
+            {
+                <td class="actions-cell">
+                    <form method="post" asp-page-handler="Remove" asp-route-id="@t.Id" data-confirm="Remove @(u?.Email) from @t.Name?" data-confirm-detail="They lose access to this team's credentials and servers right away." data-confirm-ok="Remove">
+                        <input type="hidden" name="userId" value="@m.UserId">
+                        <button class="small ghost" aria-label="Remove @(u?.Email)">@Html.Icon("trash")<span class="hide-sm">Remove</span></button>
+                    </form>
+                </td>
+            }
+        </tr>
+    }
+    </tbody>
+</table>
+</div>
+<p class="hint">Members can add, edit and delete credentials and servers. Managers also manage members and restore deleted items.</p>
+
+@if (manage)
+{
+    <h2>Add member</h2>
+    <form method="post" asp-page-handler="Add" asp-route-id="@t.Id" class="panel">
+        <div class="toolbar">
+            <input asp-for="Email" type="email" placeholder="name@company.com" required aria-label="Email" class="grow-2">
+            <select asp-for="Role" aria-label="Role">
+                <option value="@TeamRole.Member">member</option>
+                <option value="@TeamRole.Manager">manager</option>
+            </select>
+            <button>@Html.Icon("user-plus")Add member</button>
+        </div>
+        <p class="hint">People must sign in to SatuVault once before they can be added.</p>
+    </form>
+
+    <h2>Settings</h2>
+    <form method="post" asp-page-handler="Rename" asp-route-id="@t.Id" class="panel">
+        <div class="toolbar">
+            <input asp-for="NewName" required maxlength="100" aria-label="Team name" class="grow-2">
+            <button class="secondary">Rename team</button>
+        </div>
+    </form>
+}
+@if (me.IsAdmin)
+{
+    <form method="post" asp-page-handler="Delete" asp-route-id="@t.Id" data-confirm="Delete team @t.Name?" data-confirm-detail="Only possible when it has no items or servers left." data-confirm-ok="Delete team">
+        <button class="danger">@Html.Icon("trash")Delete team</button>
+    </form>
+}

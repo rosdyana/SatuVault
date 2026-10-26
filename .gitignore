@@ -1,0 +1,10 @@
+bin/
+obj/
+keys/
+*.user
+TestResults/
+.DS_Store
+*.log
+appsettings.Local.json
+.dev/
+.demo/

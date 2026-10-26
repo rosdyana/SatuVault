@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SatuVault/SatuVault.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SatuVault.Tests/SatuVault.Tests.csproj" />
+  </Folder>
+  <Folder Name="/demo/">
+    <Project Path="demo/SatuVault.Demo/SatuVault.Demo.csproj" />
+  </Folder>
+</Solution>

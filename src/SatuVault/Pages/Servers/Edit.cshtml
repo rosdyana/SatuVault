@@ -1,0 +1,48 @@
+@page
+@model SatuVault.Pages.Servers.EditModel
+@{
+    ViewData["Title"] = Model.IsNew ? "New server" : $"Edit {Model.Input.Hostname}";
+}
+<div class="page-head">
+    <div>
+        <a class="crumb" href="@(Model.IsNew ? Url.Content("~/Servers") : Url.Content($"~/Servers/Details?id={Model.Id}"))">@Html.Icon("hard-drives")@(Model.IsNew ? "Servers" : Model.Input.Hostname)</a>
+        <h1>@(Model.IsNew ? "New server" : "Edit server")</h1>
+    </div>
+</div>
+<form method="post" class="stack panel" autocomplete="off">
+    <div asp-validation-summary="ModelOnly"></div>
+    <input type="hidden" asp-for="Input.Version">
+    @if (Model.IsNew)
+    {
+        <label>Team
+            <select asp-for="Input.TeamId" required>
+                <option value="">Choose…</option>
+                @foreach (var t in Model.EditableTeams) { <option value="@t.Id">@t.Name</option> }
+            </select>
+        </label>
+    }
+    <div class="grid2">
+        <label>Hostname <input asp-for="Input.Hostname" required maxlength="255" placeholder="app-01.corp.local"></label>
+        <label>IP address <input asp-for="Input.IpAddress" maxlength="45" placeholder="10.0.0.11"></label>
+    </div>
+    <div class="grid2">
+        <label>Operating system <input asp-for="Input.Os" maxlength="200" placeholder="Windows Server 2022"></label>
+        <label>Asset ID <input asp-for="Input.AssetId" maxlength="100"></label>
+    </div>
+    <div class="grid2">
+        <label>CPU <input asp-for="Input.Cpu" maxlength="100" placeholder="8 vCPU"></label>
+        <label>RAM <input asp-for="Input.Ram" maxlength="100" placeholder="32 GB"></label>
+        <label>Disk <input asp-for="Input.Disk" maxlength="200" placeholder="C: 200 GB, D: 1 TB"></label>
+    </div>
+    <div class="grid2">
+        <label>Environment <input asp-for="Input.Environment" maxlength="50" placeholder="Production" list="envs"></label>
+        <label>Location <input asp-for="Input.Location" maxlength="200" placeholder="DC Jakarta, rack 4"></label>
+    </div>
+    <datalist id="envs"><option value="Production"></option><option value="Staging"></option><option value="Development"></option><option value="DR"></option></datalist>
+    <label>Notes <textarea asp-for="Input.Notes" maxlength="4000"></textarea></label>
+    <p class="note info">@Html.Icon("info")<span>Don't put passwords here: add them as a credential linked to this server.</span></p>
+    <div class="form-actions">
+        <button>@(Model.IsNew ? "Create server" : "Save changes")</button>
+        <a class="button secondary" href="@(Model.IsNew ? Url.Content("~/Servers") : Url.Content($"~/Servers/Details?id={Model.Id}"))">Cancel</a>
+    </div>
+</form>

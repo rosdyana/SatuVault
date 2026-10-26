@@ -1,0 +1,19 @@
+@page
+@{
+    var code = HttpContext.Response.StatusCode;
+    var (title, text) = code switch
+    {
+        403 => ("You don't have access", "This belongs to a team you're not in. Ask its manager to add you."),
+        404 => ("Not found", "It may have been deleted, or the link is wrong."),
+        _ => ("Something went wrong", "The request could not be completed. Try again, or contact your SatuVault admin."),
+    };
+    ViewData["Title"] = title;
+}
+<div class="center-card">
+    <div class="empty">
+        @Html.Icon("warning-circle", "xl")
+        <h3>@title</h3>
+        <p>@text</p>
+        <p><a class="button secondary" href="~/">Back to home</a></p>
+    </div>
+</div>

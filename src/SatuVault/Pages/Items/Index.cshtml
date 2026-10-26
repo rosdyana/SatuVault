@@ -1,0 +1,86 @@
+@page
+@model SatuVault.Pages.Items.IndexModel
+@{
+    ViewData["Title"] = Model.Deleted ? "Deleted items" : "Credentials and secrets";
+    var me = HttpContext.RequireAppUser();
+    var canAdd = !Model.Deleted && me.VisibleTeamIds.Count > 0;
+    var filtered = !string.IsNullOrWhiteSpace(Model.Q) || Model.Team is not null;
+}
+<div class="page-head">
+    <div>
+        @if (Model.Deleted) { <a class="crumb" href="~/Items">@Html.Icon("arrow-counter-clockwise")Back to credentials</a> }
+        <h1>@ViewData["Title"]</h1>
+        <p class="sub">@(Model.Deleted ? "A team manager can restore these." : "Passwords stay hidden until you reveal them with an authenticator code.")</p>
+    </div>
+    @if (canAdd)
+    {
+        <a class="button" href="~/Items/Edit@(Model.Team is null ? "" : $"?team={Model.Team}")">@Html.Icon("plus")New item</a>
+    }
+</div>
+
+<form method="get" class="toolbar" role="search">
+    <label class="search grow-2">@Html.Icon("magnifying-glass")<input name="q" value="@Model.Q" placeholder="Search title, username, URL, tags, server" aria-label="Search"></label>
+    <select name="team" aria-label="Team">
+        <option value="">All my teams</option>
+        @foreach (var t in Model.TeamsById.Values.OrderBy(t => t.Name))
+        {
+            <option value="@t.Id" selected="@(t.Id == Model.Team)">@t.Name</option>
+        }
+    </select>
+    @if (Model.Deleted) { <input type="hidden" name="deleted" value="true"> }
+    <button class="secondary">Filter</button>
+    @if (filtered) { <a class="button ghost" href="~/Items@(Model.Deleted ? "?deleted=true" : "")">Clear</a> }
+    @if (!Model.Deleted && (me.IsAdmin || me.Roles.Values.Contains(TeamRole.Manager)))
+    {
+        <span class="spacer"></span>
+        <a class="button ghost" href="~/Items?deleted=true">@Html.Icon("trash")Deleted items</a>
+    }
+</form>
+
+@if (Model.Results.Count == 0)
+{
+    <div class="empty">
+        @Html.Icon(filtered ? "magnifying-glass" : "key", "xl")
+        @if (filtered)
+        {
+            <h3>No matches</h3>
+            <p>Nothing@(string.IsNullOrWhiteSpace(Model.Q) ? "" : $" matches “{Model.Q}”") in the selected teams. Try another word or team.</p>
+        }
+        else if (Model.Deleted)
+        {
+            <h3>No deleted items</h3>
+            <p>Deleted credentials and secrets show up here so a manager can restore them.</p>
+        }
+        else
+        {
+            <h3>No credentials yet</h3>
+            <p>Store shared logins, API keys and recovery codes here instead of spreadsheets and notes.</p>
+            @if (canAdd) { <p><a class="button" href="~/Items/Edit">@Html.Icon("plus")Add the first one</a></p> }
+        }
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Title</th><th>Username</th><th class="hide-sm">Server</th><th class="hide-sm">Team</th><th class="hide-sm">Updated</th></tr></thead>
+        <tbody>
+        @foreach (var i in Model.Results)
+        {
+            <tr>
+                <td>
+                    <a class="title-link" href="~/Items/Details?id=@i.Id">@i.Meta.Title</a>
+                    @if (i.Kind == ItemKind.Secret) { <span class="badge">secret text</span> }
+                    @if (i.Meta.Tags is { } tags) { <div class="sub">@tags</div> }
+                </td>
+                <td>@i.Meta.Username</td>
+                <td class="hide-sm">@if (i.ServerId is { } sid && Model.ServersById.TryGetValue(sid, out var s)) { <a href="~/Servers/Details?id=@s.Id">@s.Info.Hostname</a> }</td>
+                <td class="hide-sm">@Model.TeamsById.GetValueOrDefault(i.TeamId)?.Name</td>
+                <td class="hide-sm nowrap">@Html.When(i.UpdatedAt)<div class="sub">@Fmt.User(Model.UsersById, i.UpdatedBy)</div></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    </div>
+    <p class="hint">@Model.Results.Count @(Model.Results.Count == 1 ? "item" : "items")</p>
+}

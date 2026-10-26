@@ -1,0 +1,72 @@
+@page
+@model SatuVault.Pages.Items.DetailsModel
+@{
+    var i = Model.Item;
+    ViewData["Title"] = i.Meta.Title;
+    var me = HttpContext.RequireAppUser();
+    var secretFields = i.Kind == ItemKind.Credential
+        ? new[] { ("password", "Password"), ("notes", "Notes") }
+        : new[] { ("secret", "Secret"), ("notes", "Notes") };
+}
+<div class="page-head">
+    <div>
+        <a class="crumb" href="~/Items">@Html.Icon("key")Credentials</a>
+        <h1>@i.Meta.Title @if (i.DeletedAt is not null) { <span class="badge warn">deleted</span> }</h1>
+        <p class="sub">@Model.Team?.Name · @(i.Kind == ItemKind.Credential ? "credential" : "secret text")</p>
+    </div>
+    <div class="row">
+        @if (i.DeletedAt is null)
+        {
+            <a class="button secondary" href="~/Items/History?id=@i.Id">@Html.Icon("clock-counter-clockwise")History</a>
+            <a class="button secondary" href="~/Items/Edit?id=@i.Id">@Html.Icon("pencil-simple")Edit</a>
+            <form method="post" asp-page-handler="Delete" asp-route-id="@i.Id" data-confirm="Delete “@i.Meta.Title”?" data-confirm-detail="A team manager can restore it later.">
+                <button class="danger">@Html.Icon("trash")Delete</button>
+            </form>
+        }
+        else if (me.CanManage(i.TeamId))
+        {
+            <form method="post" asp-page-handler="Restore" asp-route-id="@i.Id"><button>@Html.Icon("arrow-counter-clockwise")Restore</button></form>
+        }
+    </div>
+</div>
+
+<div class="panel">
+    <dl class="fields">
+        @if (i.Meta.Username is { } username)
+        {
+            <dt>Username</dt>
+            <dd><code>@username</code> <button class="small secondary" data-copy-text="@username">@Html.Icon("copy")Copy</button></dd>
+        }
+        @if (i.Meta.Url is { } url)
+        {
+            <dt>URL</dt>
+            <dd>@if (Uri.TryCreate(url, UriKind.Absolute, out var u) && (u.Scheme == "https" || u.Scheme == "http")) { <a href="@url" rel="noopener noreferrer" target="_blank">@url</a> } else { <code>@url</code> }</dd>
+        }
+        @foreach (var (field, label) in secretFields)
+        {
+            <dt>@label</dt>
+            <dd>
+                <span class="secret-value" id="v-@field">••••••••</span>
+                <button class="small" data-secret data-action="reveal" data-item="@i.Id" data-field="@field" data-target="#v-@field">@Html.Icon("eye")Reveal</button>
+                <button class="small secondary" data-secret data-action="copy" data-item="@i.Id" data-field="@field">@Html.Icon("copy")Copy</button>
+            </dd>
+        }
+        @if (Model.Server is { } s)
+        {
+            <dt>Server</dt>
+            <dd>@Html.Icon("hard-drives")<a href="~/Servers/Details?id=@s.Id">@s.Info.Hostname</a> @if (s.Info.IpAddress is { } ip) { <code>@ip</code> }</dd>
+        }
+        @if (i.Meta.Tags is { } tags)
+        {
+            <dt>Tags</dt>
+            <dd>@foreach (var tag in tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) { <span class="badge">@tag</span> }</dd>
+        }
+        <dt>Team</dt>
+        <dd>@Model.Team?.Name</dd>
+        <dt>Created</dt>
+        <dd>@Html.When(i.CreatedAt) by @Fmt.User(Model.UsersById, i.CreatedBy)</dd>
+        <dt>Last change</dt>
+        <dd>@Html.When(i.UpdatedAt) by @Fmt.User(Model.UsersById, i.UpdatedBy) · version @i.Version</dd>
+    </dl>
+</div>
+<p class="hint">@Html.Icon("lock-key") Revealed values hide again after 30 seconds. Each reveal and copy is logged with your name, the time and your IP address.</p>

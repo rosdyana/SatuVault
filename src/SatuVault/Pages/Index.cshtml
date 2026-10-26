@@ -1,0 +1,77 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Home";
+    var me = HttpContext.RequireAppUser();
+}
+<section class="hero">
+    <h1>Welcome back, @me.User.Name</h1>
+    <p>Find a credential, a secret or a server your teams look after.</p>
+    <form method="get" action="~/Items" role="search">
+        <label class="search">@Html.Icon("magnifying-glass")<input name="q" placeholder="Search credentials and secrets" aria-label="Search credentials and secrets"></label>
+    </form>
+</section>
+
+@if (Model.SetupPending)
+{
+    <p class="note err">@Html.Icon("warning-circle")<span>Setup is not finished: there is no admin yet. If you installed SatuVault, <a href="~/Setup">enter the setup token</a>.</span></p>
+}
+
+<div class="stats">
+    <a class="stat" href="~/Items"><span class="glyph">@Html.Icon("key", "lg")</span><span><span class="num">@Model.ItemCount</span><br><span class="label">@(Model.ItemCount == 1 ? "credential or secret" : "credentials and secrets")</span></span></a>
+    <a class="stat" href="~/Servers"><span class="glyph">@Html.Icon("hard-drives", "lg")</span><span><span class="num">@Model.ServerCount</span><br><span class="label">@(Model.ServerCount == 1 ? "server" : "servers")</span></span></a>
+    <a class="stat" href="~/Teams"><span class="glyph">@Html.Icon("users-three", "lg")</span><span><span class="num">@Model.MyTeams.Count</span><br><span class="label">@(Model.MyTeams.Count == 1 ? "team you belong to" : "teams you belong to")</span></span></a>
+</div>
+
+@if (Model.MyTeams.Count == 0 && !me.IsAdmin)
+{
+    <div class="empty">
+        @Html.Icon("users-three", "xl")
+        <h3>You're not in a team yet</h3>
+        <p>Ask a team manager to add <code>@me.User.Email</code>. Their credentials and servers appear here right after.</p>
+    </div>
+}
+else
+{
+    <div class="split">
+        <section class="panel">
+            <h2>Recently changed</h2>
+            @if (Model.Recent.Count == 0)
+            {
+                <p class="hint">Nothing yet. <a href="~/Items/Edit">Add the first credential</a>.</p>
+            }
+            else
+            {
+                <ul class="list">
+                    @foreach (var i in Model.Recent)
+                    {
+                        <li>
+                            <span>
+                                <a class="title-link" href="~/Items/Details?id=@i.Id">@i.Meta.Title</a>
+                                <span class="meta"><br>@Model.TeamsById.GetValueOrDefault(i.TeamId)?.Name · @Fmt.User(Model.UsersById, i.UpdatedBy)</span>
+                            </span>
+                            <span class="meta nowrap">@Html.When(i.UpdatedAt)</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+        <section class="panel">
+            <h2>Your teams</h2>
+            @if (Model.MyTeams.Count == 0)
+            {
+                <p class="hint">You're an admin and see every team, but you aren't a member of one.</p>
+            }
+            else
+            {
+                <ul class="list">
+                    @foreach (var t in Model.MyTeams)
+                    {
+                        <li><a href="~/Teams/Details?id=@t.Id">@t.Name</a> <span class="badge">@me.Roles[t.Id].ToString().ToLowerInvariant()</span></li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+}
+<p class="hint">@Html.Icon("lock-key") Revealing or copying a password always asks for a code from your authenticator app, and every access is logged.</p>

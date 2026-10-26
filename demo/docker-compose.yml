@@ -1,0 +1,21 @@
+# MySQL for the local demo only (root/demo-root, published on 127.0.0.1:53307).
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: satuvault-demo-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: demo-root
+      MYSQL_DATABASE: satuvault_demo
+    ports:
+      - "127.0.0.1:${SATU_DEMO_DB_PORT:-53307}:3306"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - demo-mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pdemo-root"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+
+volumes:
+  demo-mysql:

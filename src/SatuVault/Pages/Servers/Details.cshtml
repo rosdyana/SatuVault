@@ -1,0 +1,86 @@
+@page
+@model SatuVault.Pages.Servers.DetailsModel
+@{
+    var s = Model.Server;
+    var info = s.Info;
+    ViewData["Title"] = info.Hostname;
+    var me = HttpContext.RequireAppUser();
+    var rows = new (string Label, string? Value, bool Copy)[]
+    {
+        ("Hostname", info.Hostname, true), ("IP address", info.IpAddress, true), ("Operating system", info.Os, false),
+        ("CPU", info.Cpu, false), ("RAM", info.Ram, false), ("Disk", info.Disk, false), ("Asset ID", info.AssetId, true),
+        ("Environment", info.Environment, false), ("Location", info.Location, false),
+    };
+}
+<div class="page-head">
+    <div>
+        <a class="crumb" href="~/Servers">@Html.Icon("hard-drives")Servers</a>
+        <h1>@info.Hostname @if (s.DeletedAt is not null) { <span class="badge warn">deleted</span> }</h1>
+        <p class="sub">@string.Join(" · ", new[] { Model.Team?.Name, info.Environment, info.Os }.Where(x => x is not null))</p>
+    </div>
+    <div class="row">
+        @if (s.DeletedAt is null)
+        {
+            <a class="button" href="?id=@s.Id&handler=Rdp">@Html.Icon("download-simple")Download .rdp</a>
+            <a class="button secondary" href="~/Servers/Edit?id=@s.Id">@Html.Icon("pencil-simple")Edit</a>
+            <form method="post" asp-page-handler="Delete" asp-route-id="@s.Id" data-confirm="Delete server “@info.Hostname”?" data-confirm-detail="A team manager can restore it later. Linked credentials stay.">
+                <button class="danger">@Html.Icon("trash")Delete</button>
+            </form>
+        }
+        else if (me.CanManage(s.TeamId))
+        {
+            <form method="post" asp-page-handler="Restore" asp-route-id="@s.Id"><button>@Html.Icon("arrow-counter-clockwise")Restore</button></form>
+        }
+    </div>
+</div>
+
+<div class="panel">
+    <dl class="fields">
+        @foreach (var (label, value, copy) in rows.Where(r => r.Value is not null))
+        {
+            <dt>@label</dt>
+            <dd>@if (copy) { <code>@value</code> <button class="small secondary" data-copy-text="@value">@Html.Icon("copy")Copy</button> } else { @value }</dd>
+        }
+        @if (info.Notes is { } notes)
+        {
+            <dt>Notes</dt>
+            <dd class="pre-wrap">@notes</dd>
+        }
+        <dt>Team</dt>
+        <dd>@Model.Team?.Name</dd>
+        <dt>Last change</dt>
+        <dd>@Html.When(s.UpdatedAt) by @Fmt.User(Model.UsersById, s.UpdatedBy)</dd>
+    </dl>
+</div>
+
+<div class="section-head">
+    <h2>Credentials for this server</h2>
+    @if (s.DeletedAt is null) { <a class="button small secondary" href="~/Items/Edit?team=@s.TeamId">@Html.Icon("plus")Add credential</a> }
+</div>
+@if (Model.Credentials.Count == 0)
+{
+    <div class="empty">
+        <p>None linked yet. When you add a credential, pick this server in the Server field.</p>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th>Title</th><th>Username</th><th class="actions-cell">Password</th></tr></thead>
+        <tbody>
+        @foreach (var c in Model.Credentials)
+        {
+            <tr>
+                <td><a class="title-link" href="~/Items/Details?id=@c.Id">@c.Meta.Title</a></td>
+                <td>@c.Meta.Username</td>
+                <td class="actions-cell">
+                    <button class="small secondary" data-secret data-action="copy" data-item="@c.Id" data-field="@(c.Kind == ItemKind.Credential ? "password" : "secret")">@Html.Icon("copy")Copy</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    </div>
+}
+<p class="hint">@Html.Icon("desktop") Connect with Remote Desktop (mstsc) or SSH from your own computer. The .rdp file only holds the address; Windows asks for the login.</p>

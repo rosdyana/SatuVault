@@ -1,0 +1,88 @@
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var me = Context.AppUser();
+    var csrf = Antiforgery.GetAndStoreTokens(Context).RequestToken;
+    var flash = TempData["Flash"] as string;
+    var flashError = TempData["FlashError"] as string;
+    string Active(string prefix) => (Context.Request.Path.Value ?? "").StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    string? Current(string prefix) => Active(prefix) == "active" ? "page" : null;
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="csrf" content="@csrf">
+    <meta name="base" content="@Url.Content("~/")">
+    <title>@(ViewData["Title"] is string t ? $"{t} · SatuVault" : "SatuVault")</title>
+    <link rel="icon" href="~/favicon.svg" type="image/svg+xml">
+    <link rel="preload" href="~/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
+    <script src="~/js/site.js" asp-append-version="true" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+    <div class="top-inner">
+        <a class="brand" href="~/"><img src="~/favicon.svg" alt="">SatuVault</a>
+        @if (me is { User.TotpEnrolled: true })
+        {
+            <nav aria-label="Main">
+                <a class="@Active("/Items")" aria-current="@Current("/Items")" href="~/Items">@Html.Icon("key")Credentials</a>
+                <a class="@Active("/Servers")" aria-current="@Current("/Servers")" href="~/Servers">@Html.Icon("hard-drives")Servers</a>
+                <a class="@Active("/Teams")" aria-current="@Current("/Teams")" href="~/Teams">@Html.Icon("users-three")Teams</a>
+                @if (me.IsAdmin)
+                {
+                    <a class="@Active("/Admin/Users")" aria-current="@Current("/Admin/Users")" href="~/Admin/Users">@Html.Icon("user-gear")Users</a>
+                    <a class="@Active("/Admin/Audit")" aria-current="@Current("/Admin/Audit")" href="~/Admin/Audit">@Html.Icon("list-checks")Audit log</a>
+                }
+            </nav>
+        }
+        @if (me is not null)
+        {
+            <form method="post" action="~/Account/SignOut" class="who">
+                <span class="me" title="@me.User.Email">@me.User.Name@if (me.IsAdmin) { <span class="badge accent">admin</span> }</span>
+                <input type="hidden" name="__RequestVerificationToken" value="@csrf">
+                <button class="ghost small">@Html.Icon("sign-out")Sign out</button>
+            </form>
+        }
+    </div>
+</header>
+<main id="main" tabindex="-1">
+    @if (flash is not null)
+    {
+        <p class="note ok" role="status">@Html.Icon("check")<span>@flash</span></p>
+    }
+    @if (flashError is not null)
+    {
+        <p class="note err" role="alert">@Html.Icon("warning-circle")<span>@flashError</span></p>
+    }
+    @RenderBody()
+</main>
+
+<dialog id="code-dialog" aria-labelledby="code-title">
+    <form method="dialog" id="code-form">
+        <h2 id="code-title">Authenticator code</h2>
+        <p class="muted">Enter the current 6 digit code from your authenticator app.</p>
+        <input id="code-input" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required autofocus aria-label="Authenticator code" placeholder="000000">
+        <p class="note err" id="code-error" role="alert" hidden></p>
+        <div class="dialog-actions">
+            <button type="button" class="secondary" id="code-cancel">Cancel</button>
+            <button type="submit" id="code-submit">Confirm</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="confirm-dialog" aria-labelledby="confirm-title">
+    <form method="dialog">
+        <h2 id="confirm-title">Are you sure?</h2>
+        <p class="muted" id="confirm-text"></p>
+        <div class="dialog-actions">
+            <button type="button" class="secondary" id="confirm-cancel">Cancel</button>
+            <button type="submit" class="danger solid" id="confirm-ok">Confirm</button>
+        </div>
+    </form>
+</dialog>
+</body>
+</html>

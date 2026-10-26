@@ -1,0 +1,12 @@
+@page
+@{
+    ViewData["Title"] = "Signed out";
+}
+<div class="center-card">
+    <div class="empty">
+        @Html.Icon("sign-out", "xl")
+        <h3>You're signed out</h3>
+        <p>Close this tab, or sign in again when you need a credential.</p>
+        <p><a class="button" href="~/">Sign in again</a></p>
+    </div>
+</div>

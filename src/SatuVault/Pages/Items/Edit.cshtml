@@ -1,0 +1,78 @@
+@page
+@model SatuVault.Pages.Items.EditModel
+@{
+    ViewData["Title"] = Model.IsNew ? "New item" : $"Edit {Model.Input.Title}";
+    var credential = Model.Input.Kind == ItemKind.Credential;
+}
+<div class="page-head">
+    <div>
+        <a class="crumb" href="@(Model.IsNew ? Url.Content("~/Items") : Url.Content($"~/Items/Details?id={Model.Id}"))">@Html.Icon("key")@(Model.IsNew ? "Credentials" : Model.Input.Title)</a>
+        <h1>@(Model.IsNew ? "New item" : "Edit item")</h1>
+    </div>
+</div>
+<form method="post" class="stack panel" autocomplete="off">
+    <div asp-validation-summary="ModelOnly"></div>
+    <input type="hidden" asp-for="Input.Version">
+    <input type="hidden" asp-for="Input.SecretLoaded">
+
+    @if (Model.IsNew)
+    {
+        <div class="grid2">
+            <label>Team
+                <select asp-for="Input.TeamId" required>
+                    <option value="">Choose…</option>
+                    @foreach (var t in Model.EditableTeams) { <option value="@t.Id">@t.Name</option> }
+                </select>
+            </label>
+            <label>Type
+                <select asp-for="Input.Kind">
+                    <option value="@ItemKind.Credential">Credential (username + password)</option>
+                    <option value="@ItemKind.Secret">Secret text (key, token, recovery codes…)</option>
+                </select>
+            </label>
+        </div>
+    }
+    else
+    {
+        <input type="hidden" asp-for="Input.Kind">
+    }
+
+    <label>Title <input asp-for="Input.Title" required maxlength="200" placeholder="e.g. YouTube B (shared)"></label>
+    <div class="grid2">
+        <label>Username <span class="muted">(credentials)</span><input asp-for="Input.Username" maxlength="500"></label>
+        <label>URL <input asp-for="Input.Url" maxlength="2000" placeholder="https://…"></label>
+    </div>
+    <div class="grid2">
+        <label>Server <span class="muted">(optional link)</span>
+            <select asp-for="Input.ServerId">
+                <option value="">None</option>
+                @foreach (var s in Model.TeamServers) { <option value="@s.Id">@s.Info.Hostname @(s.Info.IpAddress is null ? "" : $"({s.Info.IpAddress})")</option> }
+            </select>
+        </label>
+        <label>Tags <input asp-for="Input.Tags" maxlength="500" placeholder="social, marketing"></label>
+    </div>
+
+    <fieldset>
+        <legend>Secret fields</legend>
+        @if (!Model.IsNew)
+        {
+            <p class="hint">Leave a field empty to keep its current value, or
+                <button type="button" class="link" data-load-secrets data-item="@Model.Id">load current secrets</button>
+                (needs a code) to see and change them.</p>
+        }
+        <label>Password
+            <span class="field-row"><input asp-for="Input.Password" type="password" id="pw" autocomplete="new-password" class="mono"><button type="button" class="secondary" data-toggle-visibility="pw" aria-pressed="false">Show</button></span>
+        </label>
+        <label>Secret text <span class="muted">(for secret text items)</span><textarea asp-for="Input.SecretText" spellcheck="false"></textarea></label>
+        <label>Notes <span class="muted">(encrypted, revealed like a password)</span><textarea asp-for="Input.Notes"></textarea></label>
+    </fieldset>
+
+    <div class="form-actions">
+        <button>@(Model.IsNew ? "Create item" : "Save changes")</button>
+        <a class="button secondary" href="@(Model.IsNew ? Url.Content("~/Items") : Url.Content($"~/Items/Details?id={Model.Id}"))">Cancel</a>
+    </div>
+</form>
+@if (!credential)
+{
+    <p class="hint">Secret text items usually leave Username and Password empty.</p>
+}

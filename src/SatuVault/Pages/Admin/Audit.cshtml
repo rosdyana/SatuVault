@@ -1,0 +1,83 @@
+@page
+@model SatuVault.Pages.Admin.AuditModel
+@{
+    ViewData["Title"] = "Audit log";
+    var query = HttpContext.Request.QueryString.Value ?? "";
+    var filtered = !string.IsNullOrWhiteSpace(Model.UserEmail) || !string.IsNullOrWhiteSpace(Model.Action) || !string.IsNullOrWhiteSpace(Model.Target) || Model.From is not null || Model.To is not null;
+}
+<div class="page-head">
+    <div>
+        <h1>Audit log</h1>
+        <p class="sub">Every sign in, reveal, copy and change, newest first. Times are in @Fmt.Zone.Id.</p>
+    </div>
+    <div class="row">
+        <a class="button secondary" href="?handler=Csv&@query.TrimStart('?')">@Html.Icon("file-csv")Export CSV</a>
+        <form method="post" asp-page-handler="Verify"><button>@Html.Icon("seal-check")Verify integrity</button></form>
+    </div>
+</div>
+
+<form method="get" class="panel stack wide">
+    <div class="grid2">
+        <label>User email <input asp-for="UserEmail" type="email" placeholder="anyone"></label>
+        <label>Event
+            <select asp-for="Action">
+                <option value="">All events</option>
+                @foreach (var (prefix, label) in SatuVault.Pages.Admin.AuditModel.Categories) { <option value="@prefix">@label</option> }
+            </select>
+        </label>
+        <label>Item, server, team or user id <input asp-for="Target" placeholder="any" class="mono"></label>
+        <label>From <input asp-for="From" type="date"></label>
+        <label>To <input asp-for="To" type="date"></label>
+    </div>
+    <div class="form-actions">
+        <button class="secondary">@Html.Icon("funnel")Filter</button>
+        @if (filtered) { <a class="button ghost" href="~/Admin/Audit">Clear filters</a> }
+    </div>
+</form>
+
+@if (Model.FilterProblem is not null)
+{
+    <p class="note err">@Html.Icon("warning-circle")<span>@Model.FilterProblem</span></p>
+}
+@if (Model.Events.Count == 0)
+{
+    <div class="empty">
+        @Html.Icon("list-checks", "xl")
+        <h3>No events match</h3>
+        <p>Try a wider date range or clear the filters.</p>
+    </div>
+}
+else
+{
+    <div class="table-wrap">
+    <table>
+        <thead><tr><th class="hide-sm">#</th><th>Time</th><th>User</th><th>Event</th><th>Target</th><th class="hide-sm">Details</th><th class="hide-sm">IP address</th></tr></thead>
+        <tbody>
+        @foreach (var e in Model.Events)
+        {
+            var label = SatuVault.Pages.Admin.AuditModel.Str(e.Details, "label");
+            <tr>
+                <td class="hide-sm muted">@e.Seq</td>
+                <td class="nowrap">@Html.When(e.Ts, exact: true)</td>
+                <td>@Fmt.User(Model.UsersById, e.ActorId)</td>
+                <td><span class="badge @SatuVault.Pages.Admin.AuditModel.Tone(e.Action)" title="@e.Action">@SatuVault.Pages.Admin.AuditModel.Label(e.Action)</span></td>
+                <td>
+                    @if (e.TargetType == "item" && e.TargetId is not null) { <a href="~/Items/Details?id=@e.TargetId">@(label ?? e.TargetId)</a> }
+                    else if (e.TargetType == "server" && e.TargetId is not null) { <a href="~/Servers/Details?id=@e.TargetId">@(label ?? e.TargetId)</a> }
+                    else if (e.TargetType == "team" && e.TargetId is not null) { <a href="~/Teams/Details?id=@e.TargetId">@(label ?? e.TargetId)</a> }
+                    else { @label }
+                    @if (e.TargetType is not null) { <div class="sub">@e.TargetType</div> }
+                </td>
+                <td class="hide-sm">@SatuVault.Pages.Admin.AuditModel.Summary(e.Details)</td>
+                <td class="hide-sm nowrap"><code>@SatuVault.Pages.Admin.AuditModel.Str(e.Details, "ip")</code></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    </div>
+    @if (Model.Events.Count == 100)
+    {
+        <p><a class="button secondary" href="?UserEmail=@Model.UserEmail&Action=@Model.Action&Target=@Model.Target&From=@Model.From?.ToString("yyyy-MM-dd")&To=@Model.To?.ToString("yyyy-MM-dd")&Before=@Model.Events[^1].Seq">Older events</a></p>
+    }
+}
+<p class="hint">@Html.Icon("shield-check") Every event is chained with a key the database never sees, so edits or deletions made directly in MySQL are caught by Verify integrity.</p>

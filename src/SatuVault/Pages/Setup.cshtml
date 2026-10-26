@@ -1,0 +1,15 @@
+@page
+@model SetupModel
+@{
+    ViewData["Title"] = "Setup";
+}
+<div class="center-card">
+    <h1>Finish setup</h1>
+    <p class="muted">Enter the one time setup token that <code>SatuVault init</code> printed on the server. You become the first admin.</p>
+    <form method="post" class="stack panel">
+        <div asp-validation-summary="ModelOnly"></div>
+        <label>Setup token <input asp-for="Token" autocomplete="off" required class="mono"></label>
+        <label>Authenticator code <input asp-for="Code" class="input-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required placeholder="000000"></label>
+        <div class="form-actions"><button>@Html.Icon("shield-check")Become admin</button></div>
+    </form>
+</div>

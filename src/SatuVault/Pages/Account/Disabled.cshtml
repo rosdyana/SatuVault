@@ -1,0 +1,11 @@
+@page
+@{
+    ViewData["Title"] = "Can't sign in";
+}
+<div class="center-card">
+    <div class="empty">
+        @Html.Icon("lock-key", "xl")
+        <h3>You can't sign in</h3>
+        <p>Your account is disabled or the sign in was not accepted. Contact your SatuVault admin.</p>
+    </div>
+</div>
